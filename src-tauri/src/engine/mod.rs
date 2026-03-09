@@ -1,4 +1,6 @@
 pub mod anthropic;
+pub mod openai_whisper;
+pub mod registry;
 pub mod whisper_cpp;
 
 use async_trait::async_trait;
@@ -15,27 +17,60 @@ pub struct TranscriptionResult {
     pub full_text: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelInfo {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub max_file_size_mb: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderCategory {
+    ApiCloud,
+    ApiLocal,
+    LocalBinary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderInfo {
+    pub id: String,
+    pub name: String,
+    pub category: ProviderCategory,
+    pub models: Vec<ModelInfo>,
+}
+
 #[async_trait]
-pub trait TranscriptionEngine: Send + Sync {
-    fn engine_id(&self) -> &str;
+pub trait TranscriptionProvider: Send + Sync {
+    fn provider_id(&self) -> &str;
+    fn provider_name(&self) -> &str;
+    fn category(&self) -> ProviderCategory;
+    fn available_models(&self) -> Vec<ModelInfo>;
     async fn transcribe(
         &self,
         audio_path: &str,
+        model_id: &str,
         language: Option<&str>,
     ) -> Result<TranscriptionResult, AppError>;
 }
 
-pub fn create_engine(
-    engine_id: &str,
-    api_key: &str,
-) -> Result<Box<dyn TranscriptionEngine>, AppError> {
-    match engine_id {
-        "anthropic" => Ok(Box::new(anthropic::AnthropicEngine::new(
-            api_key.to_string(),
-        ))),
-        "whisper_cpp" => Err(AppError::NotImplemented(
-            "whisper_cpp engine is not yet available".into(),
-        )),
-        _ => Err(AppError::InvalidEngine(engine_id.to_string())),
-    }
+pub use registry::ProviderRegistry;
+
+pub fn create_default_registry(config: &ProviderConfig) -> ProviderRegistry {
+    let mut registry = ProviderRegistry::new();
+    registry.register(Box::new(anthropic::AnthropicProvider::new(
+        config.anthropic_api_key.clone(),
+    )));
+    registry.register(Box::new(openai_whisper::OpenAIWhisperProvider::new(
+        config.openai_api_key.clone(),
+    )));
+    registry
+}
+
+#[derive(Debug, Clone)]
+pub struct ProviderConfig {
+    pub anthropic_api_key: String,
+    pub openai_api_key: String,
+    pub lm_studio_endpoint: String,
 }

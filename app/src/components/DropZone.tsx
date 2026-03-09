@@ -70,7 +70,11 @@ export function DropZone() {
     <div className={`dropzone ${isDragOver ? "dropzone-active" : ""}`}>
       <p className="dropzone-icon">&#x1F3A4;</p>
       <p>Drop audio/video file here</p>
-      <p className="dropzone-hint">mp3, wav, m4a, flac, ogg, mp4, mov</p>
+      <p className="dropzone-hint">
+        Audio: mp3, wav, m4a, aac, ogg, flac
+        <br />
+        Video: mp4, mov, mkv, webm, avi
+      </p>
     </div>
   );
 }

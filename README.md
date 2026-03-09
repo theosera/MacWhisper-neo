@@ -25,7 +25,8 @@ cd src-tauri && cargo run
 
 ## 対応フォーマット
 
-mp3, wav, m4a, aac, ogg, flac, webm, mp4, mov
+**Audio**: mp3, wav, m4a, aac, ogg, flac  
+**Video**: mp4, mov, mkv, webm, avi
 
 ## Tech Stack
 

@@ -6,16 +6,16 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use uuid::Uuid;
 
-use super::{TranscriptionEngine, TranscriptionResult};
+use super::{TranscriptionProvider, TranscriptionResult, ModelInfo, ProviderCategory};
 use crate::error::AppError;
 use crate::models::segment::Segment;
 
-pub struct AnthropicEngine {
+pub struct AnthropicProvider {
     api_key: String,
     client: Client,
 }
 
-impl AnthropicEngine {
+impl AnthropicProvider {
     pub fn new(api_key: String) -> Self {
         Self {
             api_key,
@@ -180,14 +180,40 @@ struct ResponseContent {
 }
 
 #[async_trait]
-impl TranscriptionEngine for AnthropicEngine {
-    fn engine_id(&self) -> &str {
+impl TranscriptionProvider for AnthropicProvider {
+    fn provider_id(&self) -> &str {
         "anthropic"
+    }
+
+    fn provider_name(&self) -> &str {
+        "Anthropic Claude"
+    }
+
+    fn category(&self) -> ProviderCategory {
+        ProviderCategory::ApiCloud
+    }
+
+    fn available_models(&self) -> Vec<ModelInfo> {
+        vec![
+            ModelInfo {
+                id: "claude-sonnet-4-20250514".to_string(),
+                name: "Claude Sonnet 4 (Latest)".to_string(),
+                description: "Latest Sonnet model with improved speed".to_string(),
+                max_file_size_mb: 100,
+            },
+            ModelInfo {
+                id: "claude-opus-4-1".to_string(),
+                name: "Claude Opus 4.1".to_string(),
+                description: "Most capable model".to_string(),
+                max_file_size_mb: 100,
+            },
+        ]
     }
 
     async fn transcribe(
         &self,
         audio_path: &str,
+        model_id: &str,
         language: Option<&str>,
     ) -> Result<TranscriptionResult, AppError> {
         if !Path::new(audio_path).is_file() {
