@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { resolveDroppedFile } from "../lib/tauri";
 import { useTranscription } from "../hooks/useTranscription";
 import { useTranscriptStore } from "../stores/transcriptStore";
@@ -8,37 +9,53 @@ export function DropZone() {
   const { transcribe } = useTranscription();
   const isTranscribing = useTranscriptStore((s) => s.isTranscribing);
 
-  const handleDrop = useCallback(
-    async (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragOver(false);
+  useEffect(() => {
+    const appWindow = getCurrentWindow();
+    let cancelled = false;
 
-      const files = e.dataTransfer.files;
-      if (files.length === 0) return;
+    const setupListener = async () => {
+      const unlisten = await appWindow.onDragDropEvent((event) => {
+        if (cancelled) return;
 
-      const filePath = (files[0] as unknown as { path?: string }).path;
-      if (!filePath) {
-        return;
+        if (event.payload.type === "over") {
+          setIsDragOver(true);
+        } else if (event.payload.type === "leave") {
+          setIsDragOver(false);
+        } else if (event.payload.type === "drop") {
+          setIsDragOver(false);
+          const paths = event.payload.paths;
+          if (paths.length > 0) {
+            handleFileDrop(paths[0]);
+          }
+        }
+      });
+
+      return unlisten;
+    };
+
+    let unlistenFn: (() => void) | undefined;
+    setupListener().then((fn) => {
+      if (cancelled) {
+        fn();
+      } else {
+        unlistenFn = fn;
       }
+    });
 
-      try {
-        const info = await resolveDroppedFile(filePath);
-        await transcribe(info.path);
-      } catch (err) {
-        useTranscriptStore.getState().setError(`${err}`);
-      }
-    },
-    [transcribe]
-  );
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
+    return () => {
+      cancelled = true;
+      unlistenFn?.();
+    };
   }, []);
 
-  const handleDragLeave = useCallback(() => {
-    setIsDragOver(false);
-  }, []);
+  async function handleFileDrop(filePath: string) {
+    try {
+      const info = await resolveDroppedFile(filePath);
+      await transcribe(info.path);
+    } catch (err) {
+      useTranscriptStore.getState().setError(`${err}`);
+    }
+  }
 
   if (isTranscribing) {
     return (
@@ -50,17 +67,10 @@ export function DropZone() {
   }
 
   return (
-    <div
-      className={`dropzone ${isDragOver ? "dropzone-active" : ""}`}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-    >
+    <div className={`dropzone ${isDragOver ? "dropzone-active" : ""}`}>
       <p className="dropzone-icon">&#x1F3A4;</p>
       <p>Drop audio/video file here</p>
-      <p className="dropzone-hint">
-        mp3, wav, m4a, flac, ogg, mp4, mov
-      </p>
+      <p className="dropzone-hint">mp3, wav, m4a, flac, ogg, mp4, mov</p>
     </div>
   );
 }
