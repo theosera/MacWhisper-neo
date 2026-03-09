@@ -1,0 +1,7 @@
+node_modules/
+dist/
+target/
+data/*.db
+data/whisper-output/
+*.env
+.DS_Store

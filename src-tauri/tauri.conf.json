@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MacWhisper Neo",
+  "version": "0.1.0",
+  "identifier": "com.theosera.macwhisperneo",
+  "build": {
+    "beforeDevCommand": { "script": "npm run dev", "cwd": "../app" },
+    "beforeBuildCommand": { "script": "npm run build", "cwd": "../app" },
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../app/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "MacWhisper Neo",
+        "width": 1200,
+        "height": 820,
+        "resizable": true,
+        "fileDropEnabled": true
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  },
+  "plugins": {
+    "dialog": {},
+    "fs": {
+      "scope": ["**"]
+    }
+  }
+}
