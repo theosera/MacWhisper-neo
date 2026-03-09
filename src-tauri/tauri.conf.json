@@ -16,7 +16,7 @@
         "width": 1200,
         "height": 820,
         "resizable": true,
-        "fileDropEnabled": true
+        "dragDropEnabled": true
       }
     ]
   },
