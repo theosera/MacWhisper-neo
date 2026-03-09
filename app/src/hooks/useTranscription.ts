@@ -4,6 +4,7 @@ import {
   runTranscription,
   listTranscripts,
   getTranscript,
+  listProviders,
 } from "../lib/tauri";
 
 export function useTranscription() {
@@ -15,6 +16,15 @@ export function useTranscription() {
       store.setHistory(history);
     } catch (e) {
       store.setError(`Failed to load history: ${e}`);
+    }
+  }, [store]);
+
+  const loadProviders = useCallback(async () => {
+    try {
+      const providers = await listProviders();
+      store.setProviders(providers);
+    } catch (e) {
+      store.setError(`Failed to load providers: ${e}`);
     }
   }, [store]);
 
@@ -35,9 +45,7 @@ export function useTranscription() {
   const transcribe = useCallback(
     async (audioPath: string) => {
       if (!store.apiKey) {
-        store.setError(
-          "API key is required. Enter your Anthropic API key in the settings panel."
-        );
+        store.setError("API key is required. Enter your API key in the settings panel.");
         return;
       }
       store.setTranscribing(true);
@@ -46,7 +54,8 @@ export function useTranscription() {
         const transcript = await runTranscription({
           audioPath,
           apiKey: store.apiKey,
-          engineId: "anthropic",
+          providerId: store.selectedProviderId,
+          modelId: store.selectedModelId,
         });
         store.setCurrent(transcript);
         store.selectTranscript(transcript.id);
@@ -67,5 +76,5 @@ export function useTranscription() {
     [store]
   );
 
-  return { loadHistory, selectAndLoad, transcribe };
+  return { loadHistory, loadProviders, selectAndLoad, transcribe };
 }

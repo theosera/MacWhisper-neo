@@ -238,7 +238,7 @@ impl TranscriptionProvider for AnthropicProvider {
         );
 
         let request_body = AnthropicRequest {
-            model: "claude-sonnet-4-20250514".to_string(),
+            model: model_id.to_string(),
             max_tokens: 8192,
             messages: vec![Message {
                 role: "user".to_string(),

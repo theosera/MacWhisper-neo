@@ -1,9 +1,10 @@
 use std::collections::HashMap;
-use super::{TranscriptionProvider, ProviderInfo};
+use std::sync::Arc;
+use super::{TranscriptionProvider, TranscriptionResult, ProviderInfo};
 use crate::error::AppError;
 
 pub struct ProviderRegistry {
-    providers: HashMap<String, Box<dyn TranscriptionProvider>>,
+    providers: HashMap<String, Arc<dyn TranscriptionProvider>>,
 }
 
 impl ProviderRegistry {
@@ -14,11 +15,11 @@ impl ProviderRegistry {
     }
 
     pub fn register(&mut self, provider: Box<dyn TranscriptionProvider>) {
-        self.providers.insert(provider.provider_id().to_string(), provider);
+        self.providers.insert(provider.provider_id().to_string(), Arc::from(provider));
     }
 
-    pub fn get(&self, provider_id: &str) -> Option<&dyn TranscriptionProvider> {
-        self.providers.get(provider_id).map(|p| p.as_ref())
+    pub fn get(&self, provider_id: &str) -> Option<Arc<dyn TranscriptionProvider>> {
+        self.providers.get(provider_id).cloned()
     }
 
     pub fn list_providers(&self) -> Vec<ProviderInfo> {
@@ -33,8 +34,17 @@ impl ProviderRegistry {
             .collect()
     }
 
-    pub fn get_provider_mut(&mut self, provider_id: &str) -> Option<&mut dyn TranscriptionProvider> {
-        self.providers.get_mut(provider_id).map(|p| p.as_mut())
+    pub async fn transcribe(
+        &self,
+        provider_id: &str,
+        audio_path: &str,
+        model_id: &str,
+        language: Option<&str>,
+    ) -> Result<TranscriptionResult, AppError> {
+        let provider = self
+            .get(provider_id)
+            .ok_or_else(|| AppError::InvalidEngine(provider_id.to_string()))?;
+        provider.transcribe(audio_path, model_id, language).await
     }
 }
 

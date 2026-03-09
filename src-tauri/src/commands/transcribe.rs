@@ -1,9 +1,10 @@
 use serde::Deserialize;
+use std::sync::Mutex;
 use std::time::Instant;
 use uuid::Uuid;
 
 use crate::db::Database;
-use crate::engine;
+use crate::engine::ProviderRegistry;
 use crate::error::AppError;
 use crate::models::transcript::Transcript;
 
@@ -11,8 +12,9 @@ use crate::models::transcript::Transcript;
 #[serde(rename_all = "camelCase")]
 pub struct TranscribeRequest {
     pub audio_path: String,
-    pub engine_id: Option<String>,
-    pub api_key: String,
+    pub provider_id: Option<String>,
+    pub model_id: Option<String>,
+    pub api_key: Option<String>,
     pub language: Option<String>,
 }
 
@@ -20,6 +22,7 @@ pub struct TranscribeRequest {
 pub async fn run_transcription(
     request: TranscribeRequest,
     db: tauri::State<'_, Database>,
+    registry: tauri::State<'_, Mutex<ProviderRegistry>>,
 ) -> Result<Transcript, AppError> {
     let audio_path = request.audio_path.trim();
     if audio_path.is_empty() {
@@ -31,12 +34,18 @@ pub async fn run_transcription(
         return Err(AppError::FileNotFound(audio_path.to_string()));
     }
 
-    let engine_id = request.engine_id.as_deref().unwrap_or("anthropic");
-    let engine = engine::create_engine(engine_id, &request.api_key)?;
+    let provider_id = request.provider_id.as_deref().unwrap_or("anthropic");
+    let model_id = request.model_id.as_deref().unwrap_or("claude-sonnet-4-20250514");
+
+    let provider = {
+        let reg = registry.lock().unwrap();
+        reg.get(provider_id)
+            .ok_or_else(|| AppError::InvalidEngine(provider_id.to_string()))?
+    };
 
     let start = Instant::now();
-    let result = engine
-        .transcribe(audio_path, request.language.as_deref())
+    let result = provider
+        .transcribe(audio_path, model_id, request.language.as_deref())
         .await?;
     let processing_time_ms = start.elapsed().as_millis() as i64;
 
@@ -53,12 +62,14 @@ pub async fn run_transcription(
         seg.transcript_id = transcript_id.clone();
     }
 
+    let engine_label = format!("{}/{}", provider_id, model_id);
+
     db.insert_transcript(
         &transcript_id,
         &created_at,
         audio_path,
         &file_name,
-        engine_id,
+        &engine_label,
         &result.language,
         result.duration_ms,
         processing_time_ms,
@@ -72,7 +83,7 @@ pub async fn run_transcription(
         created_at,
         audio_path: audio_path.to_string(),
         file_name,
-        engine_id: engine_id.to_string(),
+        engine_id: engine_label,
         language: result.language,
         duration_ms: result.duration_ms,
         processing_time_ms,

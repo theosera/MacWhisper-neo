@@ -1,14 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   FileInfo,
+  ProviderInfo,
   Transcript,
   TranscriptSummary,
 } from "../types";
 
 export interface TranscribeRequest {
   audioPath: string;
-  engineId?: string;
-  apiKey: string;
+  providerId?: string;
+  modelId?: string;
+  apiKey?: string;
   language?: string;
 }
 
@@ -28,4 +30,8 @@ export async function getTranscript(id: string): Promise<Transcript> {
 
 export async function resolveDroppedFile(path: string): Promise<FileInfo> {
   return invoke<FileInfo>("resolve_dropped_file", { path });
+}
+
+export async function listProviders(): Promise<ProviderInfo[]> {
+  return invoke<ProviderInfo[]>("list_providers");
 }

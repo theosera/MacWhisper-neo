@@ -36,3 +36,19 @@ export interface FileInfo {
 }
 
 export type ExportFormat = "markdown" | "txt" | "json";
+
+export interface ModelInfo {
+  id: string;
+  name: string;
+  description: string;
+  maxFileSizeMb: number;
+}
+
+export type ProviderCategory = "api_cloud" | "api_local" | "local_binary";
+
+export interface ProviderInfo {
+  id: string;
+  name: string;
+  category: ProviderCategory;
+  models: ModelInfo[];
+}
