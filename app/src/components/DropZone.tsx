@@ -6,7 +6,9 @@ import { useTranscriptStore } from "../stores/transcriptStore";
 
 export function DropZone() {
   const [isDragOver, setIsDragOver] = useState(false);
-  const { transcribe } = useTranscription();
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [isDownloading, setIsDownloading] = useState(false);
+  const { transcribe, transcribeYoutube } = useTranscription();
   const isTranscribing = useTranscriptStore((s) => s.isTranscribing);
 
   useEffect(() => {
@@ -57,24 +59,71 @@ export function DropZone() {
     }
   }
 
-  if (isTranscribing) {
+  async function handleYoutubeSubmit() {
+    const url = youtubeUrl.trim();
+    if (!url) return;
+
+    setIsDownloading(true);
+    try {
+      await transcribeYoutube(url);
+      setYoutubeUrl("");
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !isDownloading && !isTranscribing) {
+      handleYoutubeSubmit();
+    }
+  }
+
+  if (isTranscribing || isDownloading) {
     return (
       <div className="dropzone dropzone-processing">
         <div className="dropzone-spinner" />
-        <p>Transcribing...</p>
+        <p>{isDownloading ? "YouTube から音声をダウンロード中..." : "文字起こし中..."}</p>
       </div>
     );
   }
 
   return (
-    <div className={`dropzone ${isDragOver ? "dropzone-active" : ""}`}>
-      <p className="dropzone-icon">&#x1F3A4;</p>
-      <p>Drop audio/video file here</p>
-      <p className="dropzone-hint">
-        Audio: mp3, wav, m4a, aac, ogg, flac
-        <br />
-        Video: mp4, mov, mkv, webm, avi
-      </p>
+    <div className="dropzone-container">
+      <div className={`dropzone ${isDragOver ? "dropzone-active" : ""}`}>
+        <p className="dropzone-icon">&#x1F3A4;</p>
+        <p>音声/動画ファイルをドロップ</p>
+        <p className="dropzone-hint">
+          Audio: mp3, wav, m4a, aac, ogg, flac
+          <br />
+          Video: mp4, mov, mkv, webm, avi
+        </p>
+      </div>
+
+      <div className="youtube-section">
+        <div className="youtube-divider">
+          <span>または</span>
+        </div>
+        <div className="youtube-input-row">
+          <input
+            type="text"
+            className="youtube-url-input"
+            placeholder="YouTube URL を貼り付け..."
+            value={youtubeUrl}
+            onChange={(e) => setYoutubeUrl(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <button
+            className="youtube-submit-btn"
+            onClick={handleYoutubeSubmit}
+            disabled={!youtubeUrl.trim()}
+          >
+            文字起こし
+          </button>
+        </div>
+        <p className="dropzone-hint">
+          watch?v=, youtu.be/, shorts/, embed/ に対応
+        </p>
+      </div>
     </div>
   );
 }

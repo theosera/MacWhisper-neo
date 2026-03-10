@@ -1,4 +1,6 @@
 pub mod anthropic;
+pub mod gemini;
+pub mod lm_studio;
 pub mod openai_whisper;
 pub mod registry;
 pub mod whisper_cpp;
@@ -65,6 +67,12 @@ pub fn create_default_registry(config: &ProviderConfig) -> ProviderRegistry {
     registry.register(Box::new(openai_whisper::OpenAIWhisperProvider::new(
         config.openai_api_key.clone(),
     )));
+    registry.register(Box::new(gemini::GeminiProvider::new(
+        config.google_gemini_api_key.clone(),
+    )));
+    registry.register(Box::new(lm_studio::LmStudioProvider::new(
+        config.lm_studio_endpoint.clone(),
+    )));
     registry
 }
 
@@ -72,5 +80,6 @@ pub fn create_default_registry(config: &ProviderConfig) -> ProviderRegistry {
 pub struct ProviderConfig {
     pub anthropic_api_key: String,
     pub openai_api_key: String,
+    pub google_gemini_api_key: String,
     pub lm_studio_endpoint: String,
 }

@@ -1,10 +1,13 @@
 use serde::Deserialize;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use uuid::Uuid;
 
 use crate::db::Database;
-use crate::engine::ProviderRegistry;
+use crate::engine::{
+    anthropic::AnthropicProvider, gemini::GeminiProvider, lm_studio::LmStudioProvider,
+    openai_whisper::OpenAIWhisperProvider, ProviderRegistry, TranscriptionProvider,
+};
 use crate::error::AppError;
 use crate::models::transcript::Transcript;
 
@@ -16,6 +19,8 @@ pub struct TranscribeRequest {
     pub model_id: Option<String>,
     pub api_key: Option<String>,
     pub language: Option<String>,
+    /// LM Studio 選択時のエンドポイント (デフォルト: http://localhost:1234)
+    pub lm_studio_endpoint: Option<String>,
 }
 
 #[tauri::command]
@@ -35,12 +40,48 @@ pub async fn run_transcription(
     }
 
     let provider_id = request.provider_id.as_deref().unwrap_or("anthropic");
-    let model_id = request.model_id.as_deref().unwrap_or("claude-sonnet-4-20250514");
+    let model_id = request.model_id.as_deref().unwrap_or("claude-sonnet-4-6");
 
-    let provider = {
-        let reg = registry.lock().unwrap();
-        reg.get(provider_id)
-            .ok_or_else(|| AppError::InvalidEngine(provider_id.to_string()))?
+    // APIキー/エンドポイントが実行時に変わる provider はここで動的生成する
+    let provider: Arc<dyn TranscriptionProvider> = match provider_id {
+        "lm_studio" => {
+            let endpoint = request
+                .lm_studio_endpoint
+                .unwrap_or_else(|| "http://localhost:1234".to_string());
+            Arc::new(LmStudioProvider::new(endpoint))
+        }
+        "anthropic" => {
+            let api_key = request
+                .api_key
+                .as_deref()
+                .filter(|k| !k.trim().is_empty())
+                .ok_or_else(|| {
+                    AppError::Validation("Anthropic API key is required".to_string())
+                })?;
+            Arc::new(AnthropicProvider::new(api_key.to_string()))
+        }
+        "openai_whisper" => {
+            let api_key = request
+                .api_key
+                .as_deref()
+                .filter(|k| !k.trim().is_empty())
+                .ok_or_else(|| AppError::Validation("OpenAI API key is required".to_string()))?;
+            Arc::new(OpenAIWhisperProvider::new(api_key.to_string()))
+        }
+        "google_gemini" => {
+            let api_key = request
+                .api_key
+                .as_deref()
+                .filter(|k| !k.trim().is_empty())
+                .ok_or_else(|| AppError::Validation("Google Gemini API key is required".to_string()))?;
+            Arc::new(GeminiProvider::new(api_key.to_string()))
+        }
+        _ => {
+            // whisper_cpp などキー不要 provider は既存 registry から取得
+            let reg = registry.lock().unwrap();
+            reg.get(provider_id)
+                .ok_or_else(|| AppError::InvalidEngine(provider_id.to_string()))?
+        }
     };
 
     let start = Instant::now();

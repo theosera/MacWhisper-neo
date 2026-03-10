@@ -66,18 +66,32 @@ impl TranscriptionProvider for OpenAIWhisperProvider {
     }
 
     fn available_models(&self) -> Vec<ModelInfo> {
-        vec![ModelInfo {
-            id: "whisper-1".to_string(),
-            name: "Whisper v3 (Latest)".to_string(),
-            description: "Latest Whisper model - best accuracy".to_string(),
-            max_file_size_mb: 25,
-        }]
+        vec![
+            ModelInfo {
+                id: "gpt-4o-transcribe".to_string(),
+                name: "GPT-4o Transcribe".to_string(),
+                description: "最新の STT モデル - 最高精度".to_string(),
+                max_file_size_mb: 25,
+            },
+            ModelInfo {
+                id: "gpt-4o-mini-transcribe".to_string(),
+                name: "GPT-4o Mini Transcribe".to_string(),
+                description: "軽量版 - 高速・低コスト".to_string(),
+                max_file_size_mb: 25,
+            },
+            ModelInfo {
+                id: "whisper-1".to_string(),
+                name: "Whisper v3 (Legacy)".to_string(),
+                description: "旧世代モデル".to_string(),
+                max_file_size_mb: 25,
+            },
+        ]
     }
 
     async fn transcribe(
         &self,
         audio_path: &str,
-        _model_id: &str,
+        model_id: &str,
         language: Option<&str>,
     ) -> Result<TranscriptionResult, AppError> {
         if !Path::new(audio_path).is_file() {
@@ -96,7 +110,7 @@ impl TranscriptionProvider for OpenAIWhisperProvider {
                 reqwest::multipart::Part::bytes(audio_bytes)
                     .file_name(file_name.to_string()),
             )
-            .text("model", "whisper-1");
+            .text("model", model_id.to_string());
 
         let form = if let Some(lang) = language.filter(|l| !l.is_empty() && *l != "auto") {
             form.text("language", lang.to_string())

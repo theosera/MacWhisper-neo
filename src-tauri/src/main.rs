@@ -15,6 +15,7 @@ fn main() {
     let config = ProviderConfig {
         anthropic_api_key: String::new(),
         openai_api_key: String::new(),
+        google_gemini_api_key: String::new(),
         lm_studio_endpoint: "http://localhost:1234".to_string(),
     };
     let registry = Mutex::new(create_default_registry(&config));
@@ -30,6 +31,13 @@ fn main() {
             commands::history::get_transcript,
             commands::file::resolve_dropped_file,
             commands::providers::list_providers,
+            commands::settings::get_setting,
+            commands::settings::set_setting,
+            commands::youtube::download_youtube,
+            commands::youtube::cleanup_youtube_temp_file,
+            commands::models::add_custom_model,
+            commands::models::list_custom_models,
+            commands::models::delete_custom_model,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri app");

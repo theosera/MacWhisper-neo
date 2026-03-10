@@ -22,7 +22,8 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all"
+    "targets": "all",
+    "resources": ["resources/yt-dlp"]
   },
   "plugins": {}
 }

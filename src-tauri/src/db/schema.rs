@@ -31,4 +31,16 @@ pub const MIGRATIONS: &[&str] = &[
         value TEXT NOT NULL
     );
     "#,
+    r#"
+    CREATE TABLE IF NOT EXISTS custom_models (
+        id TEXT PRIMARY KEY,
+        provider_id TEXT NOT NULL,
+        model_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        max_file_size_mb INTEGER NOT NULL DEFAULT 100,
+        created_at TEXT NOT NULL,
+        UNIQUE(provider_id, model_id)
+    );
+    "#,
 ];

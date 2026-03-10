@@ -196,15 +196,21 @@ impl TranscriptionProvider for AnthropicProvider {
     fn available_models(&self) -> Vec<ModelInfo> {
         vec![
             ModelInfo {
-                id: "claude-sonnet-4-20250514".to_string(),
-                name: "Claude Sonnet 4 (Latest)".to_string(),
-                description: "Latest Sonnet model with improved speed".to_string(),
+                id: "claude-sonnet-4-6".to_string(),
+                name: "Claude Sonnet 4.6".to_string(),
+                description: "速度と知性の最適バランス (最新)".to_string(),
                 max_file_size_mb: 100,
             },
             ModelInfo {
-                id: "claude-opus-4-1".to_string(),
-                name: "Claude Opus 4.1".to_string(),
-                description: "Most capable model".to_string(),
+                id: "claude-opus-4-6".to_string(),
+                name: "Claude Opus 4.6".to_string(),
+                description: "最高知性 - エージェント・コーディング向け".to_string(),
+                max_file_size_mb: 100,
+            },
+            ModelInfo {
+                id: "claude-haiku-4-5".to_string(),
+                name: "Claude Haiku 4.5".to_string(),
+                description: "最速・低コスト".to_string(),
                 max_file_size_mb: 100,
             },
         ]
@@ -295,5 +301,50 @@ impl TranscriptionProvider for AnthropicProvider {
             segments,
             full_text,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_timestamped_segments() {
+        let text = "[00:00:00.000 --> 00:00:03.500] こんにちは、テストです。\n\
+                    [00:00:03.500 --> 00:00:07.000] これはセグメント解析のテストです。";
+
+        let segments = AnthropicProvider::parse_segments(text, "tr-test");
+        assert_eq!(segments.len(), 2);
+        assert_eq!(segments[0].start_ms, 0);
+        assert_eq!(segments[0].end_ms, 3500);
+        assert_eq!(segments[0].text, "こんにちは、テストです。");
+        assert_eq!(segments[1].start_ms, 3500);
+        assert_eq!(segments[1].end_ms, 7000);
+    }
+
+    #[test]
+    fn test_parse_plain_text_fallback() {
+        // タイムスタンプのない平文はワード数ベースで分割される
+        let text = "Hello world this is a test sentence.";
+        let segments = AnthropicProvider::parse_segments(text, "tr-test");
+        assert_eq!(segments.len(), 1);
+        assert_eq!(segments[0].text, "Hello world this is a test sentence.");
+        assert!(segments[0].end_ms > 0);
+    }
+
+    #[test]
+    fn test_parse_empty_text() {
+        let segments = AnthropicProvider::parse_segments("", "tr-test");
+        assert!(segments.is_empty());
+    }
+
+    #[test]
+    fn test_parse_timestamp_values() {
+        // HH:MM:SS.mmm 形式のパース
+        assert_eq!(AnthropicProvider::parse_timestamp("01:30:45.500"), Some(5445500));
+        // MM:SS.mmm 形式
+        assert_eq!(AnthropicProvider::parse_timestamp("02:30.000"), Some(150000));
+        // 不正な形式
+        assert_eq!(AnthropicProvider::parse_timestamp("invalid"), None);
     }
 }

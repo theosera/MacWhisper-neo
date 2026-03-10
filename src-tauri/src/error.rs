@@ -28,6 +28,9 @@ pub enum AppError {
 
     #[error("File not found: {0}")]
     FileNotFound(String),
+
+    #[error("YouTube download error: {0}")]
+    YoutubeDownload(String),
 }
 
 impl Serialize for AppError {

@@ -2,6 +2,8 @@ node_modules/
 dist/
 target/
 data/*.db
+data/*.db-wal
+data/*.db-shm
 data/whisper-output/
 *.env
 .DS_Store
